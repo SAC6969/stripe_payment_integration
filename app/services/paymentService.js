@@ -3,7 +3,6 @@ const generateUUID = require('../utilities/uuidGenerator');
 const { Sequelize } = require('sequelize');
 const stripe = require('stripe')('sk_test_51MtSsyKBdede7ICMDQjezTCWEWABPpLQ9sd9CzsHFueRygh2IOKw84JULyb2GDAPlCOFtsozOLbMgrZKNArQB7Q900kdKLykPY');
 
-
 const stripeSessionUrl = async (data,userId) => {
     try{
         console.log(userId);
@@ -109,8 +108,37 @@ const createOrder = async (customer,data) => {
     }
 }
 
+const refundPayment = async (paymentId,cb) => {
+    const transaction = await sequelize.transaction();
+    try{
+        console.log(paymentId,"$$$");
+        const paymentIntentId = paymentId;
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        const refund = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+            amount: paymentIntent.amount,
+            reason: 'requested_by_customer'
+        });
+
+        const result = await usersOrder.update(
+            { refundIntentId : refund.id},
+            { where: { paymentIntentId } },
+            transaction
+        );
+      
+        await transaction.commit();
+        return cb(null,refund);
+    }catch(error){
+        console.error(error);
+        await transaction.rollback();
+        return cb('Error already been refunded');
+    }
+}
+
 module.exports = {
     createOrder,
     stripeSessionUrl,
-    stripeWebhook
+    stripeWebhook,
+    refundPayment
 }

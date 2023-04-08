@@ -2,7 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const {swagger} = require('../config/swagger/swagger');
-const { stripeSessionUrl,stripeWebhook} = require('../services/paymentService');
+const { stripeSessionUrl,stripeWebhook,refundPayment} = require('../services/paymentService');
 require('dotenv').config();
 const stripe = require('stripe')('sk_test_51MtSsyKBdede7ICMDQjezTCWEWABPpLQ9sd9CzsHFueRygh2IOKw84JULyb2GDAPlCOFtsozOLbMgrZKNArQB7Q900kdKLykPY');
 
@@ -69,17 +69,17 @@ swagger({
 router.post('/refund/:id',async function(req,res){
     let response = { success: false, message: '', data: {}};
     try{
-        const paymentIntentId = 'pi_XXXXXXXXXXXXXXXXXXXXXXXX';
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-        // Create Refund
-        const refund = await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        amount: paymentIntent.amount,
-        reason: 'requested_by_customer'
+        const paymentId = req.params.id
+        
+        refundPayment(paymentId,(err,data)=>{
+            if(err){
+                response.message = err;
+                return res.status(400).json(response);
+            }
+            response.success = true;
+            response.message = "refunded successfully";
+            return res.status(200).json(response);
         });
-
-        console.log(refund);    
     }catch(error){
         response.message = error.message;
         return res.status(400).json(response);
