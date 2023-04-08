@@ -14,18 +14,18 @@ swagger({
 router.get('/',passport.checkAuthentication,function(req,res){
     let response = { success: false, message: '',data: {}};
     try{
-        ordersByuser(req.user,(error,data)=>{
-            if(err){
-                response.message = error
+        ordersByuser(req.user.id,(error,data)=>{
+            if(error){
+                response.message = `Error While Fetching Orders`;
                 return res.status(400).json(response);
             }
-            response.message = result;
+            response.message = 'Fetched all order';
             response.success = true;
-            return res.status(201).json(response);
+            response.data = data;
+            return res.status(200).json(response);
         })
-        res.status(200).json(response);
     }catch(error){
-        response.message = error.message;
+        response.message = `Error While Fetching Orders`;
         return res.status(400).json(response);
     }
 });
