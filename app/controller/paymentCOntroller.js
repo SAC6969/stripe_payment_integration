@@ -2,8 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const {swagger} = require('../config/swagger/swagger');
-const {login, createOrder} = require('../services/paymentService');
-const axios = require("axios");
+const { stripeSessionUrl,stripeWebhook} = require('../services/paymentService');
 require('dotenv').config();
 const stripe = require('stripe')('sk_test_51MtSsyKBdede7ICMDQjezTCWEWABPpLQ9sd9CzsHFueRygh2IOKw84JULyb2GDAPlCOFtsozOLbMgrZKNArQB7Q900kdKLykPY');
 
@@ -27,35 +26,13 @@ swagger({
 router.post('/create-checkout-session',passport.checkAuthentication,async function(req,res){
     let response = { success: false, message: '',data: {}};
     try{
-        console.log("req.user",req.user.id);
-        const customer = await stripe.customers.create({
-            metadata:{
-                userId: req.user.id,
-                cart: JSON.stringify(req.body)
-            }
-        })
-
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [{
-                price_data: {
-                currency: 'usd',
-                product_data: {
-                    name: req.body.name,
-                },
-                unit_amount: req.body.price,
-                },
-                quantity: req.body.quantity,
-            }],
-            mode: 'payment',
-            customer: customer.id,
-            success_url: `${process.env.SERVER_URL}/payment/success`,
-            cancel_url: process.env.SERVER_URL,
-        });
-
-        response.success = true
+        const userId = req.user.id;
+        const data = req.body;
+        const sessionUrl = await stripeSessionUrl(data,userId);
+        
+        response.success = true;
         response.message = "URL created";
-        response.data = session.url
+        response.data = sessionUrl.url;
         return res.status(201).json(response);
     }catch(error){
         response.message = error.message;
@@ -63,51 +40,15 @@ router.post('/create-checkout-session',passport.checkAuthentication,async functi
     }
 })
 
-// stripe webhook
-// This is your Stripe CLI webhook secret for testing your endpoint locally.
-let endpointSecret;
-// endpointSecret = "whsec_20c49557d5c91d97f9c3701037789e6af094929fd3de9013a6927dc3060e89bb";
-
 swagger({
     api: "/payment/webhook",
     summary: "webhook Api",
     tags: "STRIPE PAYMENT",
 });
 
-router.post('/webhook', (req, res) => {
+router.post('/webhook', async (req, res) => {
   try{
-    const sig = req.headers['stripe-signature'];
-
-    let data;
-    let eventType;
-
-    if(endpointSecret){
-        let event;
-        try {
-            event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-            console.log("webhook verified.");
-        } catch (err) {
-            console.log(`webhook err.${err.message}`);
-            res.status(400).send(`Webhook Error: ${err.message}`);
-            return;
-        }
-        data = event.data.object;
-        eventType = event.type;
-    }else{
-        data = req.body.data.object;
-        eventType = req.body.type;
-    }
-
-    // Handle the event
-    if(eventType === "checkout.session.completed"){
-        stripe.customers
-        .retrieve(data.customer)
-        .then((customer)=>{
-            createOrder(customer,data);
-        }).catch(err=>{
-            return res.status(400).send(`Webhook Error: ${err.message}`);
-        })
-    }
+    await stripeWebhook(req);
     res.send().end();
   }catch(error){
     console.log(`error in webhook ${error}`);
