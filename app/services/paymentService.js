@@ -33,7 +33,7 @@ const stripeSessionUrl = async (data,userId) => {
 
         return session;
     }catch(error){
-        return error;
+        throw error;
     }
 }
 
@@ -76,7 +76,7 @@ const stripeWebhook = async (req) =>{
             })
         }
     }catch(error){
-        return error;
+        throw error;
     }
 }
 
@@ -105,6 +105,7 @@ const createOrder = async (customer,data) => {
     }catch(error){
         console.log("Order Payment not done");
         await transaction.rollback();
+        throw error;
     }
 }
 

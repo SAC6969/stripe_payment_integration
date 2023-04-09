@@ -1,15 +1,19 @@
-const {usersOrder} = require('../config/sequelize');
+const {usersOrder,sequelize} = require('../config/sequelize');
 const { Sequelize } = require('sequelize');
 
-const ordersByuser = async (userId,cb) =>{
+const ordersByuser = async (userId) =>{
+    let transaction = await sequelize.transaction();
     try{
         const orders = await usersOrder.findAll({
             where:{userId:userId},
-            raw: true
+            raw: true,
+            transaction
         });
-        return cb(null,orders)
+        await transaction.commit();
+        return orders;
     }catch(error){
-        return cb(error.message);
+        await transaction.rollback();
+        throw error;
     }
 }
 

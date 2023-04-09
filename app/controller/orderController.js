@@ -6,24 +6,19 @@ const {ordersByuser} = require('../services/orderService');
 
 swagger({
     api: "/order/",
-    summary: "orders",
-    tags: "ORDER BY USER",
+    summary: "orders by user",
+    tags: "ORDERS",
     method: "get",
 });
 
-router.get('/',passport.checkAuthentication,function(req,res){
+router.get('/',passport.checkAuthentication,async function(req,res){
     let response = { success: false, message: '',data: {}};
     try{
-        ordersByuser(req.user.id,(error,data)=>{
-            if(error){
-                response.message = `Error While Fetching Orders`;
-                return res.status(400).json(response);
-            }
-            response.message = 'Fetched all order';
-            response.success = true;
-            response.data = data;
-            return res.status(200).json(response);
-        })
+        const data = await ordersByuser(req.user.id);
+        response.message = 'Fetched all order';
+        response.success = true;
+        response.data = data;
+        return res.status(200).json(response);
     }catch(error){
         response.message = `Error While Fetching Orders`;
         return res.status(400).json(response);

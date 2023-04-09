@@ -19,8 +19,13 @@ router.get('/',passport.checkAuthentication,function(req,res){
 
 swagger({
     api: "/payment/create-checkout-session",
-    summary: "Register Api",
+    summary: "createing checkout session for the order",
     tags: "STRIPE PAYMENT",
+    fields: [
+        "name",
+        "price",
+        "quantity"
+    ]
 });
 
 router.post('/create-checkout-session',passport.checkAuthentication,async function(req,res){
@@ -58,8 +63,8 @@ router.post('/webhook', async (req, res) => {
 
 swagger({
     api: "/payment/refund/{id}",
-    summary: "Register Api",
-    tags: "AUTH",
+    summary: "Refund of the order by id",
+    tags: "STRIPE PAYMENT",
     fields: [
         "userId",
         "password",
