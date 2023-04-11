@@ -112,7 +112,6 @@ const createOrder = async (customer,data) => {
 const refundPayment = async (paymentId,cb) => {
     const transaction = await sequelize.transaction();
     try{
-        console.log(paymentId,"$$$");
         const paymentIntentId = paymentId;
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
@@ -137,9 +136,41 @@ const refundPayment = async (paymentId,cb) => {
     }
 }
 
+const transferPayment = async (paymentId,cb) => {
+    const transaction = await sequelize.transaction();
+    try{
+        console.log(paymentId,"$$$");
+        const paymentIntentId = paymentId;
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        const transfer = await stripe.transfers.create({
+            amount: paymentIntent.amount, // Amount in cents
+            currency: paymentIntent.currency,
+            destination: 'acct_1MvH4iGh4ZXom1Fu',
+            transfer_group: paymentIntent.id
+        });
+        
+        // const updatedPaymentIntent = await stripe.paymentIntents.update(
+        //     paymentIntent.id,{
+        //       status: transfer.status === 'succeeded' ? 'succeeded' : 'failed',
+        //     }
+        // );
+        // console.log(transfer);
+        // console.log("##333w",updatedPaymentIntent);
+
+        await transaction.commit();
+        return cb(null,transfer.id);
+    }catch(error){
+        console.error(error);
+        await transaction.rollback();
+        return cb('Error while sending to provider');
+    }
+}
+
 module.exports = {
     createOrder,
     stripeSessionUrl,
     stripeWebhook,
-    refundPayment
+    refundPayment,
+    transferPayment
 }

@@ -2,7 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const {swagger} = require('../config/swagger/swagger');
-const { stripeSessionUrl,stripeWebhook,refundPayment} = require('../services/paymentService');
+const { stripeSessionUrl,stripeWebhook,refundPayment,transferPayment} = require('../services/paymentService');
 require('dotenv').config();
 const stripe = require('stripe')('sk_test_51MtSsyKBdede7ICMDQjezTCWEWABPpLQ9sd9CzsHFueRygh2IOKw84JULyb2GDAPlCOFtsozOLbMgrZKNArQB7Q900kdKLykPY');
 
@@ -83,6 +83,35 @@ router.post('/refund/:id',async function(req,res){
             }
             response.success = true;
             response.message = "refunded successfully";
+            return res.status(200).json(response);
+        });
+    }catch(error){
+        response.message = error.message;
+        return res.status(400).json(response);
+    }
+})
+
+
+swagger({
+    api: "/payment/transfer/{id}",
+    summary: "transfer to the provider",
+    tags: "STRIPE PAYMENT",
+    // fields: []
+});
+
+router.post('/transfer/:id',async function(req,res){
+    let response = { success: false, message: '', data: {}};
+    try{
+        const paymentId = req.params.id
+        console.log(paymentId,"######3")
+        transferPayment(paymentId,(err,data)=>{
+            if(err){
+                response.message = err;
+                return res.status(400).json(response);
+            }
+            console.log(data);
+            response.success = true;
+            response.message = "Transfer successfully";
             return res.status(200).json(response);
         });
     }catch(error){
